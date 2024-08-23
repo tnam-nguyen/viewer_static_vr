@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js vr - MSI renderer</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<link type="text/css" rel="stylesheet" href="main.css">
+
+			
+			
+		</script>
+
+        <script type="importmap">
+          {
+            "imports": {
+				"three": "https://unpkg.com/three@0.167.1/build/three.module.js",
+				"three/addons/": "https://unpkg.com/three@0.167.1/examples/jsm/"
+            }
+          }
+        </script>
+	</head>
+	<body>
+		<div id="container"></div>
+
+		<script type="module">
+
+            import * as THREE from 'three';
+			import { VRButton } from 'three/addons/webxr/VRButton.js';
+            import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+			import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+			import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+            import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import Stats from 'three/addons/libs/stats.module.js';
+
+			let camera, scene, renderer, sphere, clock, controls;
+
+			const radii = [1.00, 1.032989, 1.0682288, 1.105958, 1.1464497, 1.1900191, 1.2370311, 1.2879103, 1.3431542,
+                            1.4033499, 1.4691943, 1.5415217, 1.6213388, 1.7098731, 1.8086348, 1.9195048, 2.0448549, 2.1877205, 2.3520486, 2.5430682,
+                            2.7678573, 3.0362391, 3.362256, 3.7667074, 4.281768, 4.96, 5.893536, 7.259953, 9.45122, 13.537117, 23.846151, 99.99995
+                ];
+				
+				
+			const numSpheres =32;
+			const spheres = [];
+			let videosReady = 0;
+			let videoDuration = 0;
+			const videoElements = [];
+    		const videoTextures = [];
+			let startTime = null;
+            const stats = new Stats();
+            container.appendChild( stats.dom );
+			clock = new THREE.Clock();
+			init();
+			animate();
+
+
+			async function init() {
+
+				const container = document.getElementById( 'container' );
+
+				
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x0000);
+
+
+				camera = new THREE.PerspectiveCamera(100 , window.innerWidth / window.innerHeight, .1, 200 );
+				camera.position.set( 0, 0, 0 );
+                camera.lookAt(0, 0, 0);
+				scene.add( camera );
+               
+                
+
+				renderer = new THREE.WebGLRenderer({alpha: true, precision: 'lowp'});
+                renderer.setClearColor( 0xffffff, 0 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.xr.enabled = true;
+				renderer.xr.setReferenceSpaceType( 'local' );
+				//renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+				container.appendChild( renderer.domElement );
+
+				container.appendChild( VRButton.createButton( renderer ) );
+
+                controls = new OrbitControls( camera, renderer.domElement );
+                controls.target = new THREE.Vector3(0.2,0,0.2);
+                controls.autoRotate = true;
+				controls.listenToKeyEvents( window ); // optional
+                controls.keyPanSpeed = 100;
+				controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+				controls.dampingFactor = 0.05;
+
+				controls.screenSpacePanning = false;
+
+			
+
+                controls.addEventListener( 'end', onInteractionEnd );
+
+				window.addEventListener( 'resize', onWindowResize );
+
+				createSpheres();
+				await loadVideos();
+				setTimeout(playVideo, 1000);
+				setInterval(playVideo, videoDuration*1000 + 3000); // Auto loop after 8 seconds
+			}			
+			function createSpheres() {
+				for (let i = 0; i < numSpheres; i++) {
+					const geometry = new THREE.SphereGeometry(radii[i], 32, 32);
+					const material = new THREE.MeshBasicMaterial({
+						transparent: true,
+						side: THREE.BackSide,
+						
+						//blending: THREE.CustomBlending,
+						// blendEquation: THREE.AddEquation, // You can use other equations like SubtractEquation, ReverseSubtractEquation
+						//blendSrc: THREE.OneFactor, 
+						// blendDst: THREE.OneMinusSrcAlphaFactor  
+					});
+
+					const sphere = new THREE.Mesh(geometry, material);
+					sphere.renderOrder = numSpheres - i;
+					scene.add(sphere);
+					spheres.push(sphere);
+				}
+        	}
+			function loadVideos() {
+				return new Promise((resolve, reject) => {
+					videosReady = 0;
+
+					for (let i = 0; i < numSpheres; i++) {
+						const videoElement = document.createElement('video');
+						const videoURL = "spheres_video_lowres/" + i.toString().padStart(2, '0') + '.webm';
+						videoElement.src = videoURL;
+						videoElement.crossOrigin = 'anonymous';
+						videoElement.loop = false;
+						videoElement.muted = true;
+
+						videoElement.addEventListener('loadedmetadata', () => {
+							if (videoDuration === 0) {
+								videoDuration = videoElement.duration;
+							}
+							videosReady++;
+							if (videosReady === numSpheres) {
+								resolve();
+							}
+						});
+
+						videoElements.push(videoElement);
+					}
+
+					for (let i = numSpheres - 1; i >= 0; i--) {
+						const videoTexture = new THREE.VideoTexture(videoElements[i]);
+						videoTexture.format = THREE.RGBAFormat;
+						videoTexture.premultipliedAlpha = false;
+						videoTexture.colorSpace = THREE.SRGBColorSpace;
+
+						videoTextures.push(videoTexture);
+
+						spheres[i].material.map = videoTexture;
+					}
+				});
+			}
+
+			
+
+			function playVideo() {
+				if (!startTime) {
+					// Record the time when the first video is played using the Three.js clock
+					startTime = clock.getElapsedTime(); // Time in seconds since the clock started
+				}
+
+				// Loop through each video in reverse order and dynamically adjust start time
+				for (let i = numSpheres - 1; i >= 0; i--) {
+					// Calculate the time difference using the Three.js clock
+					//videoElements[i].pause();
+					const elapsedTime = clock.getElapsedTime() - startTime; // Time difference in seconds
+
+					// Adjust the currentTime of the video
+					//const playTime = elapsedTime //+ (31-i)*0.001
+					//console.log("sphere: " + i + " - time: " + (playTime ))
+					videoElements[i].currentTime = elapsedTime ;
+					// Play the video
+					
+					videoElements[i].play();
+				
+   		 		}
+		 			startTime= null;
+			}
+
+            function onInteractionEnd() {
+                controls.autoRotate = false;
+            }
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				
+
+				renderer.setAnimationLoop( render );
+
+			}
+
+			function render() {
+				if ( renderer.xr.isPresenting === false ) {
+	                controls.update();
+				}
+
+				stats.update();
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+	</body>
+</html>
