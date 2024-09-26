@@ -34,13 +34,18 @@
 
 			let camera, scene, renderer, sphere, clock, controls;
 
-			const radii = [1.00, 1.032989, 1.0682288, 1.105958, 1.1464497, 1.1900191, 1.2370311, 1.2879103, 1.3431542,
-                            1.4033499, 1.4691943, 1.5415217, 1.6213388, 1.7098731, 1.8086348, 1.9195048, 2.0448549, 2.1877205, 2.3520486, 2.5430682,
-                            2.7678573, 3.0362391, 3.362256, 3.7667074, 4.281768, 4.96, 5.893536, 7.259953, 9.45122, 13.537117, 23.846151, 99.99995
-                ];
+			
 				
-				
-			const numSpheres =32;
+			const numSpheres =48;
+			const near = 1.0;
+			const far = 50.0;
+			const radii =[]
+			for (let i = 0; i < numSpheres; i++){
+				const fraction = i / (numSpheres - 1);
+				const linearValue = (1.0 / near) * (1.0 - fraction) + (1.0 / far) * fraction;
+				const radius = 1.0 / linearValue;
+				radii.push(radius);
+			}
 			const spheres = [];
 			let videosReady = 0;
 			let videoDuration = 0;
@@ -128,7 +133,7 @@
 
 					for (let i = 0; i < numSpheres; i++) {
 						const videoElement = document.createElement('video');
-						const videoURL = "spheres_video/" + i.toString().padStart(2, '0') + '.webm';
+						const videoURL = "teleporter_video/" + i.toString().padStart(2, '0') + '.webm';
 						videoElement.src = videoURL;
 						videoElement.crossOrigin = 'anonymous';
 						videoElement.loop = false;
