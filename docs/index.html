@@ -109,7 +109,7 @@
 				setInterval(playVideo, videoDuration*1000 + 4000); // Auto loop after 3 seconds
 			}			
 			function createSpheres() {
-				for (let i = 0; i < numSpheres; i++) {
+				for (let i = 0; i < numSpheres-16; i++) {
 					const geometry = new THREE.SphereGeometry(radii[i], 16, 16);
 					const material = new THREE.MeshBasicMaterial({
 						transparent: true,
@@ -122,7 +122,7 @@
 					});
 
 					const sphere = new THREE.Mesh(geometry, material);
-					sphere.renderOrder = numSpheres - i;
+					sphere.renderOrder = numSpheres-16 - i;
 					scene.add(sphere);
 					spheres.push(sphere);
 				}
@@ -131,7 +131,7 @@
 				return new Promise((resolve, reject) => {
 					videosReady = 0;
 
-					for (let i = 0; i < numSpheres; i++) {
+					for (let i = 0; i < numSpheres-16; i++) {
 						const videoElement = document.createElement('video');
 						const videoURL = "teleporter_video/" + i.toString().padStart(2, '0') + '.webm';
 						videoElement.src = videoURL;
@@ -144,7 +144,7 @@
 								videoDuration = videoElement.duration;
 							}
 							videosReady++;
-							if (videosReady === numSpheres) {
+							if (videosReady === numSpheres-16) {
 								resolve();
 							}
 						});
@@ -152,7 +152,7 @@
 						videoElements.push(videoElement);
 					}
 
-					for (let i = numSpheres - 1; i >= 0; i--) {
+					for (let i = numSpheres -16 - 1; i >= 0; i--) {
 						const videoTexture = new THREE.VideoTexture(videoElements[i]);
 						videoTexture.format = THREE.RGBAFormat;
 						videoTexture.premultipliedAlpha = false;
@@ -174,7 +174,7 @@
 				}
 
 				// Loop through each video in reverse order and dynamically adjust start time
-				for (let i = numSpheres - 1; i >= 0; i--) {
+				for (let i = numSpheres - 1-16; i >= 0; i--) {
 					// Calculate the time difference using the Three.js clock
 					//videoElements[i].pause();
 					const elapsedTime = clock.getElapsedTime() - startTime; // Time difference in seconds
