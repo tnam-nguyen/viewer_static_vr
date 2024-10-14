@@ -1,1 +1,1 @@
-Host at https://tnam02112001.github.io/viewer_static_vr/
+Host at https://tnam-nguyen.github.io/viewer_static_vr/
